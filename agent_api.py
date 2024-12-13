@@ -85,7 +85,7 @@ async def analyze_skin(request: AnalysisRequest):
     """
     try:
         # Esegui la funzione `main` con un massimo di 3 tentativi
-        result = execute_main_with_retries(request.images, max_retries=3)
+        result = execute_main_with_retries(request.images, max_retries=10)
 
         # Aggiorna la storia delle analisi del paziente specificato
         update_patient_analysis(request.patient_id, result)
