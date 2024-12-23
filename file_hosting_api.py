@@ -3,7 +3,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pathlib import Path
 
-app = FastAPI()
+app = FastAPI(
+    root_path="/api1"
+)
 
 # Configurazione CORS
 app.add_middleware(

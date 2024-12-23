@@ -8,7 +8,9 @@ from pydantic import BaseModel
 from typing import List
 from agent.agent_utils import main  # Importiamo la funzione `main` dallo script precedente
 
-app = FastAPI()
+app = FastAPI(
+    root_path="/api2"
+)
 
 # Configurazione CORS aperto
 app.add_middleware(

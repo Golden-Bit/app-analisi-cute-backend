@@ -6,7 +6,9 @@ from typing import List, Dict, Any
 from fastapi.middleware.cors import CORSMiddleware
 
 
-app = FastAPI()
+app = FastAPI(
+    root_path="/api3"
+)
 
 # Configurazione CORS
 app.add_middleware(
