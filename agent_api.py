@@ -6,7 +6,9 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List
+
 from agent.agent_utils import main  # Importiamo la funzione `main` dallo script precedente
+from utils import verify_credentials  # Funzione di verifica credenziali (non mostrata qui)
 
 app = FastAPI(
     root_path="/api2"
@@ -21,19 +23,72 @@ app.add_middleware(
     allow_headers=["*"],  # Permette tutti gli header
 )
 
-# Modello per la richiesta
+
+# ------------------------------------------------------------------------------
+# MODELLI
+# ------------------------------------------------------------------------------
 class AnalysisRequest(BaseModel):
+    """
+    Modello per la richiesta di analisi:
+    - patient_id: ID del paziente
+    - images: lista di immagini in Base64
+    """
     patient_id: str
     images: List[str]  # Lista di immagini in formato Base64
 
-# Modello per la risposta
+
 class AnalysisResult(BaseModel):
+    """
+    Modello per la risposta di analisi:
+    - result: dizionario con i risultati dell'analisi
+    """
     result: dict  # Risultato parsato come dizionario
+
+
+# ------------------------------------------------------------------------------
+# FUNZIONI UTILI
+# ------------------------------------------------------------------------------
+def get_user_anagrafiche_file(username: str) -> str:
+    """
+    Restituisce il percorso del file anagrafiche per lo user specificato:
+    user_data/<username>/anagrafiche.json
+    """
+    user_folder = os.path.join("user_data", username)
+    if not os.path.exists(user_folder):
+        os.makedirs(user_folder)
+    return os.path.join(user_folder, "anagrafiche.json")
+
+
+def load_user_anagrafiche(username: str) -> List[dict]:
+    """
+    Carica e restituisce l'elenco dei pazienti (anagrafiche)
+    dal file user_data/<username>/anagrafiche.json.
+    Se il file non esiste o non è leggibile, ritorna una lista vuota.
+    """
+    anagrafiche_path = get_user_anagrafiche_file(username)
+    if not os.path.isfile(anagrafiche_path):
+        return []
+    try:
+        with open(anagrafiche_path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return []
+
+
+def save_user_anagrafiche(username: str, data: List[dict]):
+    """
+    Salva l'elenco di pazienti (anagrafiche) nel file
+    user_data/<username>/anagrafiche.json.
+    """
+    anagrafiche_path = get_user_anagrafiche_file(username)
+    with open(anagrafiche_path, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=4, ensure_ascii=False)
 
 
 def execute_main_with_retries(base64_images, max_retries=3):
     """
-    Esegue la funzione main un massimo di `max_retries` volte finché non restituisce un risultato valido.
+    Esegue la funzione main (analisi delle immagini) un massimo di `max_retries` volte
+    finché non restituisce un risultato valido.
     """
     for attempt in range(max_retries):
         try:
@@ -46,27 +101,23 @@ def execute_main_with_retries(base64_images, max_retries=3):
     raise ValueError("Impossibile ottenere un risultato valido dopo più tentativi.")
 
 
-PATIENTS_FILE = "anagrafiche.json"  # Percorso del file JSON contenente le anagrafiche
-
-def update_patient_analysis(patient_id: str, analysis_result: dict):
+def update_patient_analysis(username: str, patient_id: str, analysis_result: dict):
     """
-    Aggiorna il file dei pazienti per aggiungere il risultato di un'analisi
-    al paziente specificato, creando o aggiornando il campo `analysis_history`.
+    Aggiorna il file anagrafiche dell'utente `username` per aggiungere
+    il risultato di un'analisi al paziente specificato, creando o aggiornando
+    il campo `analysis_history`.
 
-    :param patient_id: ID del paziente
+    :param username: nome utente che possiede il file anagrafiche
+    :param patient_id: ID del paziente da aggiornare
     :param analysis_result: Risultato dell'analisi da aggiungere
     """
-    if not os.path.exists(PATIENTS_FILE):
-        raise FileNotFoundError(f"Il file {PATIENTS_FILE} non esiste.")
-
-    # Leggi i dati dal file
-    with open(PATIENTS_FILE, "r") as f:
-        patients_data = json.load(f)
+    # Carica i pazienti dal file dell'utente
+    patients_data = load_user_anagrafiche(username)
 
     # Trova il paziente specificato
     patient = next((p for p in patients_data if p.get("id") == patient_id), None)
     if not patient:
-        raise ValueError(f"Il paziente con ID {patient_id} non esiste.")
+        raise ValueError(f"Il paziente con ID {patient_id} non esiste per l'utente {username}.")
 
     # Aggiungi o aggiorna il campo `analysis_history`
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -77,29 +128,50 @@ def update_patient_analysis(patient_id: str, analysis_result: dict):
         patient["analysis_history"] = [analysis_entry]
 
     # Salva le modifiche nel file
-    with open(PATIENTS_FILE, "w", encoding="utf-8") as f:
-        json.dump(patients_data, f, indent=4)
+    save_user_anagrafiche(username, patients_data)
 
+
+# ------------------------------------------------------------------------------
+# ENDPOINT
+# ------------------------------------------------------------------------------
 @app.post("/analyze_skin", response_model=AnalysisResult)
-async def analyze_skin(request: AnalysisRequest):
+async def analyze_skin(
+        username: str,
+        password: str,
+        request: AnalysisRequest
+):
     """
     Endpoint per analizzare lo stato della pelle in base a immagini Base64.
+    Richiede credenziali e la request con patient_id e images in Base64.
     """
+    # Verifica credenziali
+    if not verify_credentials(username, password):
+        raise HTTPException(status_code=401, detail="Credenziali non valide")
+
     try:
-        # Esegui la funzione `main` con un massimo di 3 tentativi
+        # Esegui la funzione `main` con un massimo di 10 tentativi (come da codice originale)
         result = execute_main_with_retries(request.images, max_retries=10)
 
         # Aggiorna la storia delle analisi del paziente specificato
-        update_patient_analysis(request.patient_id, result)
+        update_patient_analysis(username, request.patient_id, result)
 
         return {"result": result}
+
     except FileNotFoundError as e:
+        # Se l'utente non ha mai creato un file anagrafiche o manca qualche file
         raise HTTPException(status_code=500, detail=f"Errore file: {e}")
     except ValueError as e:
+        # Se il paziente non esiste o la funzione main non ha prodotto un risultato
         raise HTTPException(status_code=404, detail=f"Errore: {e}")
     except Exception as e:
+        # Altri errori generici
         raise HTTPException(status_code=500, detail=str(e))
 
+
+# ------------------------------------------------------------------------------
+# AVVIO SERVER
+# ------------------------------------------------------------------------------
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8001)

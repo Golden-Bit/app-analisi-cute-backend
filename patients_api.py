@@ -1,35 +1,24 @@
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-from uuid import uuid4
+import os
 import json
-from typing import List, Dict, Any
+import bcrypt
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel
+from typing import List, Dict, Any
+from uuid import uuid4
 
+from utils import verify_credentials  # la tua funzione di verifica password
 
-app = FastAPI(
-    root_path="/api3"
-)
+app = FastAPI(root_path="/api3")
 
-# Configurazione CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Puoi specificare i domini consentiti
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Nome del file JSON per memorizzare le anagrafiche
-DATA_FILE = "anagrafiche.json"
-
-# Assicurati che il file esista e abbia un formato valido
-try:
-    with open(DATA_FILE, "r") as file:
-        anagrafiche = json.load(file)
-except (FileNotFoundError, json.JSONDecodeError):
-    anagrafiche = []
-
-# Modello per l'anagrafica
 
 # Modello per una singola anagrafica
 class Anagrafica(BaseModel):
@@ -45,90 +34,155 @@ class Anagrafica(BaseModel):
     issues: List[str]
     analysis_history: List[Dict[str, Any]] = []
 
-# Gestione della richiesta OPTIONS
+# ------------------------------------------------------------------------
+#  FUNZIONI DI SUPPORTO
+# ------------------------------------------------------------------------
+def get_user_anagrafiche_file(username: str) -> str:
+    """
+    Ritorna il path del file anagrafiche per lo user specificato:
+    user_data/<username>/anagrafiche.json
+
+    Se la cartella user_data/<username> non esiste, la crea.
+    """
+    user_folder = os.path.join("user_data", username)
+    if not os.path.exists(user_folder):
+        os.makedirs(user_folder)
+    return os.path.join(user_folder, "anagrafiche.json")
+
+
+def load_user_anagrafiche(username: str) -> List[dict]:
+    """
+    Carica la lista di anagrafiche dal file dell'utente.
+    Se il file non esiste o è vuoto, ritorna lista vuota.
+    """
+    user_anagrafiche_path = get_user_anagrafiche_file(username)
+    if not os.path.isfile(user_anagrafiche_path):
+        return []
+    try:
+        with open(user_anagrafiche_path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return []
+
+
+def save_user_anagrafiche(username: str, anagrafiche_list: List[dict]):
+    """
+    Salva la lista di anagrafiche nel file dell'utente, in user_data/<username>/anagrafiche.json
+    """
+    user_anagrafiche_path = get_user_anagrafiche_file(username)
+    with open(user_anagrafiche_path, "w", encoding="utf-8") as f:
+        json.dump(anagrafiche_list, f, indent=4)
+# ------------------------------------------------------------------------
+
+
 @app.options("/{path_name:path}")
 async def options_handler():
     return JSONResponse(status_code=200, content="OK")
 
 
-# Funzione di supporto per salvare i dati nel file JSON
-def save_to_file():
-    with open(DATA_FILE, "w") as file:
-        json.dump(anagrafiche, file, indent=4)
+# ------------------------------------------------------------------------
+#  ENDPOINTS
+# ------------------------------------------------------------------------
 
-from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-from pydantic import BaseModel
-from typing import List
-import json
-import uuid
-
-# Endpoint per creare una nuova anagrafica
 @app.post("/create_anagrafiche")
-async def create_anagrafica(new_anagrafica: Anagrafica):
-    try:
-        # Carica le anagrafiche esistenti
-        try:
-            with open(DATA_FILE, "r") as file:
-                anagrafiche = json.load(file)
-        except FileNotFoundError:
-            anagrafiche = []
+async def create_anagrafica(
+    username: str,
+    password: str,
+    new_anagrafica: Anagrafica
+):
+    """
+    Crea una nuova anagrafica per l'utente 'username' (se i credentials sono validi).
+    """
+    # 1. Verifica credenziali
+    if not verify_credentials(username, password):
+        raise HTTPException(status_code=401, detail="Credenziali non valide")
 
-        # Aggiungi la nuova anagrafica
-        anagrafiche.append(new_anagrafica.dict())
+    # 2. Carica anagrafiche esistenti dell'utente
+    anagrafiche = load_user_anagrafiche(username)
 
-        # Salva il file aggiornato
-        with open(DATA_FILE, "w") as file:
-            json.dump(anagrafiche, file, indent=4)
+    # 3. Aggiungi la nuova anagrafica
+    anagrafiche.append(new_anagrafica.dict())
 
-        return {"message": "Anagrafica creata con successo"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    # 4. Salva
+    save_user_anagrafiche(username, anagrafiche)
+
+    return {"message": "Anagrafica creata con successo"}
+
 
 @app.put("/anagrafiche/{anagrafica_id}", response_model=Anagrafica)
-async def update_anagrafica(anagrafica_id: str, updated_data: Anagrafica):
+async def update_anagrafica(
+    username: str,
+    password: str,
+    anagrafica_id: str,
+    updated_data: Anagrafica
+):
     """
-    Aggiorna un'anagrafica esistente tramite ID.
+    Aggiorna un'anagrafica esistente per l'utente specificato, tramite ID.
     """
-    for idx, anagrafica in enumerate(anagrafiche):
-        if anagrafica["id"] == anagrafica_id:
-            anagrafiche[idx] = updated_data.dict()
-            anagrafiche[idx]["id"] = anagrafica_id  # Mantieni l'ID invariato
-            save_to_file()
+    # 1. Verifica credenziali
+    if not verify_credentials(username, password):
+        raise HTTPException(status_code=401, detail="Credenziali non valide")
+
+    # 2. Carica l'elenco anagrafiche di quell'utente
+    anagrafiche = load_user_anagrafiche(username)
+
+    # 3. Cerca l'anagrafica da aggiornare
+    for idx, an_item in enumerate(anagrafiche):
+        if an_item["id"] == anagrafica_id:
+            # Sostituisci i campi con quelli nuovi, ma conserva l'ID
+            updated_dict = updated_data.dict()
+            updated_dict["id"] = anagrafica_id
+            anagrafiche[idx] = updated_dict
+
+            # Salva e ritorna
+            save_user_anagrafiche(username, anagrafiche)
             return anagrafiche[idx]
+
     raise HTTPException(status_code=404, detail="Anagrafica non trovata.")
 
+
 @app.delete("/anagrafiche/{anagrafica_id}", response_model=dict)
-async def delete_anagrafica(anagrafica_id: str):
+async def delete_anagrafica(
+    anagrafica_id: str,
+    username: str,
+    password: str
+):
     """
-    Elimina un'anagrafica tramite ID.
+    Elimina un'anagrafica tramite ID, dal file dell'utente.
     """
-    for idx, anagrafica in enumerate(anagrafiche):
-        if anagrafica["id"] == anagrafica_id:
+    # 1. Verifica credenziali
+    if not verify_credentials(username, password):
+        raise HTTPException(status_code=401, detail="Credenziali non valide")
+
+    # 2. Carica l'elenco anagrafiche di quell'utente
+    anagrafiche = load_user_anagrafiche(username)
+
+    # 3. Trova e rimuovi l'anagrafica
+    for idx, an_item in enumerate(anagrafiche):
+        if an_item["id"] == anagrafica_id:
             deleted = anagrafiche.pop(idx)
-            save_to_file()
+            save_user_anagrafiche(username, anagrafiche)
             return {"message": "Anagrafica eliminata con successo.", "data": deleted}
     raise HTTPException(status_code=404, detail="Anagrafica non trovata.")
 
 
 @app.get("/anagrafiche", response_model=List[Anagrafica])
-async def get_anagrafiche():
+async def get_anagrafiche(
+    username: str,
+    password: str
+):
     """
-    Recupera tutte le anagrafiche.
+    Recupera tutte le anagrafiche dell'utente specificato.
     """
+    # 1. Verifica credenziali
+    if not verify_credentials(username, password):
+        raise HTTPException(status_code=401, detail="Credenziali non valide")
 
-    try:
-        with open(DATA_FILE, "r", encoding="utf-8") as file:
-            anagrafiche = json.load(file)
-    except FileNotFoundError:
-        anagrafiche = []
-
+    # 2. Carica e restituisci
+    anagrafiche = load_user_anagrafiche(username)
     return anagrafiche
 
+
 if __name__ == "__main__":
-
     import uvicorn
-
     uvicorn.run(app, host="0.0.0.0", port=8002)
-

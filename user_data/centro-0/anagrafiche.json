@@ -1,0 +1,138 @@
+[
+    {
+        "id": "string",
+        "nome": "string",
+        "cognome": "string",
+        "birth_date": "string",
+        "address": "string",
+        "peso": 0.0,
+        "altezza": 0.0,
+        "gender": "string",
+        "skin_types": [
+            "string"
+        ],
+        "issues": [
+            "string"
+        ],
+        "analysis_history": [
+            {
+                "timestamp": "2024-12-26 02:37:18",
+                "result": {
+                    "Idratazione": {
+                        "valore": 70,
+                        "descrizione": "La pelle appare generalmente ben idratata, con una leggera opacità che potrebbe indicare una lieve disidratazione.",
+                        "valutazione_professionale": "L'idratazione è buona, ma potrebbe beneficiare di un'attenzione aggiuntiva per mantenere la luminosità.",
+                        "consigli": "Utilizzare una crema idratante quotidiana e bere molta acqua per mantenere l'idratazione."
+                    },
+                    "Strato lipidico": {
+                        "valore": 65,
+                        "descrizione": "Lo strato lipidico sembra adeguato, ma potrebbe essere migliorato per una protezione ottimale.",
+                        "valutazione_professionale": "Un buon equilibrio lipidico, ma potrebbe essere rinforzato per una migliore barriera cutanea.",
+                        "consigli": "Considerare l'uso di oli naturali o sieri per migliorare lo strato lipidico."
+                    },
+                    "Elasticità": {
+                        "valore": 75,
+                        "descrizione": "La pelle mostra una buona elasticità, con una risposta elastica soddisfacente.",
+                        "valutazione_professionale": "L'elasticità è in buono stato, suggerendo una pelle giovane e sana.",
+                        "consigli": "Continuare a utilizzare prodotti che promuovono la produzione di collagene."
+                    },
+                    "Cheratina": {
+                        "valore": 60,
+                        "descrizione": "La cheratina è presente in quantità normali, ma potrebbe essere migliorata per una texture più liscia.",
+                        "valutazione_professionale": "Livelli di cheratina accettabili, ma un leggero aumento potrebbe migliorare la texture della pelle.",
+                        "consigli": "Utilizzare esfolianti delicati per migliorare la distribuzione della cheratina."
+                    },
+                    "Pelle sensibile": {
+                        "valore": 50,
+                        "descrizione": "La pelle mostra segni di sensibilità, con alcune aree leggermente arrossate.",
+                        "valutazione_professionale": "La sensibilità è moderata, richiedendo attenzione per evitare irritazioni.",
+                        "consigli": "Evitare prodotti aggressivi e utilizzare creme lenitive."
+                    },
+                    "Macchie cutanee": {
+                        "valore": 40,
+                        "descrizione": "Sono presenti alcune macchie cutanee, che potrebbero essere migliorate con trattamenti specifici.",
+                        "valutazione_professionale": "Le macchie sono visibili e potrebbero beneficiare di trattamenti schiarenti.",
+                        "consigli": "Considerare l'uso di prodotti con vitamina C o acido glicolico."
+                    },
+                    "Tonalità": {
+                        "valore": 80,
+                        "descrizione": "La tonalità della pelle è uniforme e luminosa, con un aspetto sano.",
+                        "valutazione_professionale": "La tonalità è eccellente, conferendo un aspetto giovane e radioso.",
+                        "consigli": "Mantenere una routine di cura della pelle che supporti l'uniformità del tono."
+                    },
+                    "Densità pilifera": {
+                        "valore": 55,
+                        "descrizione": "La densità pilifera è moderata, con una distribuzione uniforme.",
+                        "valutazione_professionale": "La densità è accettabile, ma potrebbe essere gestita per un aspetto più liscio.",
+                        "consigli": "Considerare trattamenti di epilazione per ridurre la densità pilifera."
+                    },
+                    "Pori ostruiti": {
+                        "valore": 45,
+                        "descrizione": "I pori appaiono leggermente ostruiti, con alcune aree che potrebbero beneficiare di una pulizia più profonda.",
+                        "valutazione_professionale": "I pori ostruiti sono presenti e potrebbero essere migliorati con una routine di pulizia adeguata.",
+                        "consigli": "Utilizzare maschere purificanti e detergenti esfolianti per mantenere i pori puliti."
+                    }
+                }
+            },
+            {
+                "timestamp": "2024-12-26 02:41:34",
+                "result": {
+                    "Idratazione": {
+                        "valore": 70,
+                        "descrizione": "La pelle appare generalmente ben idratata, con una leggera opacità in alcune aree.",
+                        "valutazione_professionale": "L'idratazione è buona, ma potrebbe beneficiare di un'attenzione maggiore in alcune zone.",
+                        "consigli": "Utilizzare una crema idratante quotidiana per mantenere l'equilibrio idrico."
+                    },
+                    "Strato lipidico": {
+                        "valore": 65,
+                        "descrizione": "Lo strato lipidico è moderato, con una leggera tendenza alla secchezza in alcune aree.",
+                        "valutazione_professionale": "Un buon equilibrio lipidico, ma potrebbe essere migliorato per una protezione ottimale.",
+                        "consigli": "Considerare l'uso di oli naturali per migliorare la barriera lipidica."
+                    },
+                    "Elasticità": {
+                        "valore": 75,
+                        "descrizione": "La pelle mostra una buona elasticità, con una risposta elastica adeguata.",
+                        "valutazione_professionale": "L'elasticità è soddisfacente, indicando una pelle giovane e sana.",
+                        "consigli": "Mantenere l'elasticità con una dieta ricca di antiossidanti e idratazione adeguata."
+                    },
+                    "Cheratina": {
+                        "valore": 60,
+                        "descrizione": "La cheratina è presente in quantità moderata, con alcune aree di ispessimento.",
+                        "valutazione_professionale": "La cheratina è a livelli normali, ma potrebbe essere ridotta in alcune zone per una texture più liscia.",
+                        "consigli": "Utilizzare esfolianti delicati per ridurre l'accumulo di cheratina."
+                    },
+                    "Pelle sensibile": {
+                        "valore": 50,
+                        "descrizione": "La pelle mostra segni di sensibilità in alcune aree, con arrossamenti occasionali.",
+                        "valutazione_professionale": "La sensibilità è moderata, richiedendo attenzione nella scelta dei prodotti.",
+                        "consigli": "Optare per prodotti ipoallergenici e testare nuovi prodotti su una piccola area."
+                    },
+                    "Macchie cutanee": {
+                        "valore": 40,
+                        "descrizione": "Sono presenti alcune macchie cutanee, probabilmente dovute a esposizione solare.",
+                        "valutazione_professionale": "Le macchie sono visibili e potrebbero essere ridotte con trattamenti specifici.",
+                        "consigli": "Utilizzare creme solari e prodotti schiarenti per ridurre le macchie."
+                    },
+                    "Tonalità": {
+                        "valore": 80,
+                        "descrizione": "La tonalità della pelle è uniforme e luminosa.",
+                        "valutazione_professionale": "Una tonalità sana e uniforme, indicativa di una buona salute generale della pelle.",
+                        "consigli": "Mantenere la tonalità con una dieta equilibrata e protezione solare."
+                    },
+                    "Densità pilifera": {
+                        "valore": 55,
+                        "descrizione": "La densità pilifera è moderata, con una crescita uniforme.",
+                        "valutazione_professionale": "La densità è normale, ma potrebbe essere gestita per un aspetto più curato.",
+                        "consigli": "Considerare trattamenti di depilazione o regolazione per una gestione ottimale."
+                    },
+                    "Pori ostruiti": {
+                        "valore": 45,
+                        "descrizione": "I pori appaiono leggermente ostruiti, specialmente nella zona T.",
+                        "valutazione_professionale": "I pori ostruiti potrebbero beneficiare di una pulizia più profonda.",
+                        "consigli": "Utilizzare maschere purificanti e detergenti esfolianti per mantenere i pori puliti."
+                    }
+                }
+            }
+        ]
+    }
+]
