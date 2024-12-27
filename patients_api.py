@@ -111,10 +111,10 @@ async def create_anagrafica(
 
 @app.put("/anagrafiche/{anagrafica_id}", response_model=Anagrafica)
 async def update_anagrafica(
+        anagrafica_id: str,
     updated_data: Anagrafica,
         username: str = Form(""),
         password: str = Form(""),
-        anagrafica_id: str = Form("")
 ):
     """
     Aggiorna un'anagrafica esistente per l'utente specificato, tramite ID.
@@ -143,7 +143,7 @@ async def update_anagrafica(
 
 @app.delete("/anagrafiche/{anagrafica_id}", response_model=dict)
 async def delete_anagrafica(
-    anagrafica_id: str = Form(""),
+    anagrafica_id: str,
     username: str = Form(""),
     password: str = Form(""),
 ):
