@@ -86,9 +86,9 @@ async def options_handler():
 
 @app.post("/create_anagrafiche")
 async def create_anagrafica(
-        new_anagrafica: Anagrafica = Form(...),
-        username: str = Form(""),
-        password: str = Form(""),
+        new_anagrafica: Anagrafica,
+        username: str,
+        password: str,
 ):
     """
     Crea una nuova anagrafica per l'utente 'username' (se i credentials sono validi).
@@ -112,9 +112,9 @@ async def create_anagrafica(
 @app.put("/anagrafiche/{anagrafica_id}", response_model=Anagrafica)
 async def update_anagrafica(
         anagrafica_id: str,
-    updated_data: Anagrafica = Form(...),
-        username: str = Form(""),
-        password: str = Form(""),
+    updated_data: Anagrafica,
+        username: str,
+        password: str,
 ):
     """
     Aggiorna un'anagrafica esistente per l'utente specificato, tramite ID.
@@ -144,8 +144,8 @@ async def update_anagrafica(
 @app.delete("/anagrafiche/{anagrafica_id}", response_model=dict)
 async def delete_anagrafica(
     anagrafica_id: str,
-    username: str = Form(""),
-    password: str = Form(""),
+    username: str,
+    password: str,
 ):
     """
     Elimina un'anagrafica tramite ID, dal file dell'utente.
@@ -168,8 +168,8 @@ async def delete_anagrafica(
 
 @app.get("/anagrafiche", response_model=List[Anagrafica])
 async def get_anagrafiche(
-    username: str = Form(""),
-    password: str = Form(""),
+    username: str,
+    password: str,
 ):
     """
     Recupera tutte le anagrafiche dell'utente specificato.
