@@ -112,7 +112,7 @@ async def create_anagrafica(
 @app.put("/anagrafiche/{anagrafica_id}", response_model=Anagrafica)
 async def update_anagrafica(
         anagrafica_id: str,
-    updated_data: Anagrafica,
+        updated_data: Anagrafica,
         username: str,
         password: str,
 ):
