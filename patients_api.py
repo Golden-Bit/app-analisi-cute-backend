@@ -86,7 +86,7 @@ async def options_handler():
 
 @app.post("/create_anagrafiche")
 async def create_anagrafica(
-        new_anagrafica: Anagrafica,
+        new_anagrafica: Anagrafica = Form(...),
         username: str = Form(""),
         password: str = Form(""),
 ):
@@ -112,7 +112,7 @@ async def create_anagrafica(
 @app.put("/anagrafiche/{anagrafica_id}", response_model=Anagrafica)
 async def update_anagrafica(
         anagrafica_id: str,
-    updated_data: Anagrafica,
+    updated_data: Anagrafica = Form(...),
         username: str = Form(""),
         password: str = Form(""),
 ):
