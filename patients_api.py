@@ -1,7 +1,7 @@
 import os
 import json
 import bcrypt
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
@@ -86,9 +86,9 @@ async def options_handler():
 
 @app.post("/create_anagrafiche")
 async def create_anagrafica(
-    username: str,
-    password: str,
-    new_anagrafica: Anagrafica
+        new_anagrafica: Anagrafica,
+        username: str = Form(""),
+        password: str = Form(""),
 ):
     """
     Crea una nuova anagrafica per l'utente 'username' (se i credentials sono validi).
@@ -111,10 +111,10 @@ async def create_anagrafica(
 
 @app.put("/anagrafiche/{anagrafica_id}", response_model=Anagrafica)
 async def update_anagrafica(
-    username: str,
-    password: str,
-    anagrafica_id: str,
-    updated_data: Anagrafica
+    updated_data: Anagrafica,
+        username: str = Form(""),
+        password: str = Form(""),
+        anagrafica_id: str = Form("")
 ):
     """
     Aggiorna un'anagrafica esistente per l'utente specificato, tramite ID.
@@ -143,9 +143,9 @@ async def update_anagrafica(
 
 @app.delete("/anagrafiche/{anagrafica_id}", response_model=dict)
 async def delete_anagrafica(
-    anagrafica_id: str,
-    username: str,
-    password: str
+    anagrafica_id: str = Form(""),
+    username: str = Form(""),
+    password: str = Form(""),
 ):
     """
     Elimina un'anagrafica tramite ID, dal file dell'utente.
@@ -168,8 +168,8 @@ async def delete_anagrafica(
 
 @app.get("/anagrafiche", response_model=List[Anagrafica])
 async def get_anagrafiche(
-    username: str,
-    password: str
+    username: str = Form(""),
+    password: str = Form(""),
 ):
     """
     Recupera tutte le anagrafiche dell'utente specificato.
