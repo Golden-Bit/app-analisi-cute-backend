@@ -34,6 +34,7 @@ class AnalysisRequest(BaseModel):
     - images: lista di immagini in Base64
     """
     patient_id: str
+    body_zone: str = "Non specificata"
     images: List[str]  # Lista di immagini in formato Base64
 
 
@@ -85,7 +86,7 @@ def save_user_anagrafiche(username: str, data: List[dict]):
         json.dump(data, f, indent=4, ensure_ascii=False)
 
 
-def execute_main_with_retries(base64_images, max_retries=3):
+def execute_main_with_retries(base64_images, body_zone: str = "Non specificata", max_retries=10):
     """
     Esegue la funzione main (analisi delle immagini) un massimo di `max_retries` volte
     finché non restituisce un risultato valido.
@@ -93,7 +94,7 @@ def execute_main_with_retries(base64_images, max_retries=3):
     for attempt in range(max_retries):
         try:
             print(f"Tentativo {attempt + 1} di esecuzione della funzione main...")
-            result = main(base64_images)
+            result = main(base64_images, body_zone)
             if result is not None:
                 return result
         except Exception as e:
@@ -150,7 +151,9 @@ async def analyze_skin(
 
     try:
         # Esegui la funzione `main` con un massimo di 10 tentativi (come da codice originale)
-        result = execute_main_with_retries(request.images, max_retries=10)
+        result = execute_main_with_retries(request.images, request.body_zone, max_retries=10)
+
+        result["body_zone"] = request.body_zone
 
         # Aggiorna la storia delle analisi del paziente specificato
         update_patient_analysis(username, request.patient_id, result)

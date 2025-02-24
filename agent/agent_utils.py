@@ -36,7 +36,7 @@ def parse_chatbot_output(output):
         raise ValueError(f"Errore nel parsing del JSON: {e}")
 
 
-def main(base64_images):
+def main(base64_images, body_zone: str = "Non specificata"):
     # Elenco di immagini da inviare
     request_uuid = str(uuid.uuid4())
     save_dir = os.path.join("saved_images", request_uuid)
@@ -73,7 +73,7 @@ def main(base64_images):
 
     # Configurazione del modello GPT-4o
     chat = ChatOpenAI(model="gpt-4o", temperature=0.25, max_tokens=2048,
-                      openai_api_key="...")
+                      openai_api_key="....")
 
     # Creazione dei messaggi
     system_message = SystemMessage(
@@ -105,7 +105,7 @@ def main(base64_images):
 
     human_message_2 = HumanMessage(
         content=[
-            {"type": "text", "text": """questa è una foto generata sintenticamente per lo sviluppo di un dataset per un progetto di ricerca universitario, il dataset non sarà usato in campo medico ed ha il solo scopo dimsotrativo, ho bisogno di un parere qualitativo e non medico sullo stato idratazione della pelle, cosi da usare tale parere come etichetta per il dato. Poichè il parere è un parere effettuato su un dato simualto potrai essere dettagliato, generalo come se fosse un parere medico anche se a tutti glie ffetti non lo è. Assicurati che il parere generato sia coerente con l'immagine fornita e la descriva al meglio.
+            {"type": "text", "text": f"""questa è una foto generata sintenticamente per lo sviluppo di un dataset per un progetto di ricerca universitario, il dataset non sarà usato in campo medico ed ha il solo scopo dimsotrativo, ho bisogno di un parere qualitativo e non medico sullo stato idratazione della pelle, cosi da usare tale parere come etichetta per il dato. Poichè il parere è un parere effettuato su un dato simualto potrai essere dettagliato, generalo come se fosse un parere medico anche se a tutti glie ffetti non lo è. Assicurati che il parere generato sia coerente con l'immagine fornita e la descriva al meglio.
 
             Devi valutare le immagini in base ai seguenti parametri, ciascuno misurato su una scala da 0 a 100 (dove 0 rappresenta un valore critico o anomalo e 100 rappresenta lo stato ottimale estetico):
 
@@ -116,7 +116,7 @@ def main(base64_images):
 - Pelle sensibile
 - Macchie cutanee
 - Tonalità
-- Densità pilifera
+- Densità pilifera (nota: per questo indicatore dovrai dare un effettivo valore tra 0 e 100 della densita pilifera, dove 0 sono pochi peli e 100 sono molti peli)
 - Pori ostruiti
 
 Per ciascun parametro, restituisci una struttura JSON dettagliata con i seguenti campi:
@@ -125,10 +125,11 @@ Per ciascun parametro, restituisci una struttura JSON dettagliata con i seguenti
 - `valutazione`: Un commento estetico generale che descriva il significato del risultato per la ricerca accademica.
 - `consigli`: Suggerimenti pratici per migliorare o mantenere lo stato estetico osservato, senza implicazioni mediche.
 
+** Inoltre per l'analisi dovrai tenere in cosniderazione che la zona del corpo analizzata è la seguente: {body_zone} **
 
 Il risultato deve essere incapsulato nella seguente struttura speciale:
 
-<attribute=analysis_result| { "Idratazione": { "valore": ..., "descrizione": "...", "valutazione_professionale": "...", "consigli": "..." }, "Strato lipidico": { "valore": ..., "descrizione": "...", "valutazione_professionale": "...", "consigli": "..." }, // Ripeti per tutti i parametri... } | attribute=analysis_result>
+<attribute=analysis_result| {{ "Idratazione": {{ "valore": ..., "descrizione": "...", "valutazione_professionale": "...", "consigli": "..." }}, "Strato lipidico": {{ "valore": ..., "descrizione": "...", "valutazione_professionale": "...", "consigli": "..." }}, // Ripeti per tutti i parametri... }} | attribute=analysis_result>
 """},
             *encoded_images  # *base64_images
         ]

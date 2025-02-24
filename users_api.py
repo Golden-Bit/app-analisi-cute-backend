@@ -170,6 +170,154 @@ def update_user(username: str, updated_data: UpdateUserRequest):
 
 
 # -----------------------------
+# Pydantic Model per operazioni admin
+# -----------------------------
+class AdminChangePasswordRequest(BaseModel):
+    admin_username: str
+    admin_password: str
+    new_password: str
+
+# -----------------------------
+# Endpoint Admin: Cambio password arbitrario di un utente
+# -----------------------------
+@app.put("/admin/change_password/{target_username}")
+def admin_change_password(target_username: str, req: AdminChangePasswordRequest):
+    """
+    Permette all'utente admin (username "admin") di cambiare la password di un qualsiasi account.
+    Richiede:
+      - admin_username: deve essere "admin"
+      - admin_password: password corrente dell'admin (verificata tramite hash)
+      - new_password: la nuova password da assegnare all'utente target
+    """
+    # Verifica che l'utente che richiede l'operazione sia "admin"
+    if req.admin_username != "admin":
+        raise HTTPException(status_code=403, detail="Accesso non autorizzato.")
+
+    # Verifica le credenziali dell'admin
+    try:
+        admin_data = load_user_data(req.admin_username)
+    except HTTPException:
+        raise HTTPException(status_code=401, detail="Credenziali admin non valide.")
+
+    if not bcrypt.checkpw(req.admin_password.encode("utf-8"), admin_data["hashed_password"].encode("utf-8")):
+        raise HTTPException(status_code=401, detail="Credenziali admin non valide.")
+
+    # Carica i dati dell'utente target
+    try:
+        user_data = load_user_data(target_username)
+    except HTTPException:
+        raise HTTPException(status_code=404, detail="Utente di destinazione non trovato.")
+
+    # Aggiorna la password con il nuovo valore (hashata)
+    new_hashed = bcrypt.hashpw(req.new_password.encode("utf-8"), bcrypt.gensalt())
+    user_data["hashed_password"] = new_hashed.decode("utf-8")
+    save_user_data(user_data)
+
+    return {"message": f"Password dell'utente '{target_username}' cambiata con successo."}
+
+
+# -----------------------------
+# Endpoint Admin: Visualizzazione di tutti gli account
+# -----------------------------
+@app.get("/admin/accounts")
+def get_all_accounts(admin_username: str, admin_password: str):
+    """
+    Permette all'utente admin (username "admin") di visualizzare tutti gli account e le relative informazioni.
+    Le credenziali admin devono essere passate come query parameters.
+    """
+    # Verifica che l'utente che effettua la richiesta sia "admin"
+    if admin_username != "admin":
+        raise HTTPException(status_code=403, detail="Accesso non autorizzato.")
+
+    # Verifica le credenziali dell'admin
+    try:
+        admin_data = load_user_data(admin_username)
+    except HTTPException:
+        raise HTTPException(status_code=401, detail="Credenziali admin non valide.")
+
+    if not bcrypt.checkpw(admin_password.encode("utf-8"), admin_data["hashed_password"].encode("utf-8")):
+        raise HTTPException(status_code=401, detail="Credenziali admin non valide.")
+
+    # Leggi tutti i file utente nella cartella USERS_FOLDER
+    accounts = []
+    for filename in os.listdir(USERS_FOLDER):
+        if filename.endswith(".json"):
+            with open(os.path.join(USERS_FOLDER, filename), "r", encoding="utf-8") as f:
+                user_info = json.load(f)
+                accounts.append(user_info)
+
+    return {"accounts": accounts}
+
+
+# -----------------------------
+# Endpoint Admin: Eliminazione di un utente
+# -----------------------------
+@app.delete("/admin/delete/{target_username}")
+def admin_delete_user(target_username: str, admin_username: str, admin_password: str):
+    """
+    Permette all'utente admin (username "admin") di eliminare un qualsiasi account.
+    Le credenziali admin devono essere passate come query parameters.
+
+    Esempio di richiesta:
+      DELETE /admin/delete/utente_target?admin_username=admin&admin_password=laPasswordAdmin
+
+    Nota: L'admin non può eliminare se stesso.
+    """
+    # Impedisci che l'admin elimini se stesso (opzionale)
+    if target_username == "admin":
+        raise HTTPException(status_code=403, detail="L'admin non può eliminare se stesso.")
+
+    # Verifica che chi effettua la richiesta sia "admin"
+    if admin_username != "admin":
+        raise HTTPException(status_code=403, detail="Accesso non autorizzato.")
+
+    # Verifica le credenziali dell'admin
+    try:
+        admin_data = load_user_data(admin_username)
+    except HTTPException:
+        raise HTTPException(status_code=401, detail="Credenziali admin non valide.")
+
+    if not bcrypt.checkpw(admin_password.encode("utf-8"), admin_data["hashed_password"].encode("utf-8")):
+        raise HTTPException(status_code=401, detail="Credenziali admin non valide.")
+
+    # Verifica che l'utente target esista
+    file_path = get_user_file_path(target_username)
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="Utente di destinazione non trovato.")
+
+    # Elimina il file corrispondente all'utente target
+    os.remove(file_path)
+    return {"message": f"Utente '{target_username}' eliminato con successo."}
+
+
+# -----------------------------
+# Endpoint: Visualizzazione dei dati dell'utente (profilo personale)
+# -----------------------------
+@app.get("/me")
+def get_own_data(username: str, password: str):
+    """
+    Permette ad un utente di visualizzare i propri dati.
+    Verifica le credenziali e, se corrette, restituisce i dati (username e metadata).
+    """
+    # Carica i dati dell'utente
+    try:
+        user_data = load_user_data(username)
+    except HTTPException:
+        raise HTTPException(status_code=404, detail="Utente non trovato.")
+
+    # Verifica le credenziali
+    hashed_password = user_data["hashed_password"].encode("utf-8")
+    if not bcrypt.checkpw(password.encode("utf-8"), hashed_password):
+        raise HTTPException(status_code=401, detail="Credenziali non valide.")
+
+    # Rimuove il campo hashed_password dalla risposta (opzionale)
+    user_data.pop("hashed_password", None)
+
+    return {"data": user_data}
+
+
+
+# -----------------------------
 # Avvio del server (sviluppo)
 # -----------------------------
 if __name__ == "__main__":

@@ -37,6 +37,8 @@ class Anagrafica(BaseModel):
 # ------------------------------------------------------------------------
 #  FUNZIONI DI SUPPORTO
 # ------------------------------------------------------------------------
+
+
 def get_user_anagrafiche_file(username: str) -> str:
     """
     Ritorna il path del file anagrafiche per lo user specificato:
@@ -65,13 +67,30 @@ def load_user_anagrafiche(username: str) -> List[dict]:
         return []
 
 
+def load_all_anagrafiche(username: str):
+    if username != "admin":
+        return []
+
+    users = []
+    for user_file in os.listdir("users"):
+        users.append(user_file.replace(".json", ""))
+
+    anagrafiche = []
+    for user_name in users:
+        anagrafiche.extend(load_user_anagrafiche(user_name))
+
+    return anagrafiche
+
+
 def save_user_anagrafiche(username: str, anagrafiche_list: List[dict]):
     """
     Salva la lista di anagrafiche nel file dell'utente, in user_data/<username>/anagrafiche.json
     """
     user_anagrafiche_path = get_user_anagrafiche_file(username)
+    for anagrafica in anagrafiche_list:
+        anagrafica["source_user"] = username
     with open(user_anagrafiche_path, "w", encoding="utf-8") as f:
-        json.dump(anagrafiche_list, f, indent=4)
+        json.dump(anagrafiche_list, f, indent=4, ensure_ascii=False)
 # ------------------------------------------------------------------------
 
 
@@ -178,9 +197,13 @@ async def get_anagrafiche(
     if not verify_credentials(username, password):
         raise HTTPException(status_code=401, detail="Credenziali non valide")
 
-    # 2. Carica e restituisci
-    anagrafiche = load_user_anagrafiche(username)
-    return anagrafiche
+    if username == "admin":
+        anagrafiche = load_all_anagrafiche(username)
+
+        return anagrafiche
+    else:
+        anagrafiche = load_user_anagrafiche(username)
+        return anagrafiche
 
 
 if __name__ == "__main__":
