@@ -37,7 +37,7 @@ def parse_chatbot_output(output):
 
 
 def main(base64_images, body_zone: str = "Non specificata"):
-    # Elenco di immagini da inviare
+    # Elenco di immagini da inviare: genera un UUID per creare una cartella di salvataggio
     request_uuid = str(uuid.uuid4())
     save_dir = os.path.join("saved_images", request_uuid)
 
@@ -47,9 +47,24 @@ def main(base64_images, body_zone: str = "Non specificata"):
     # Salva le immagini nella cartella creata
     image_paths = []
     for i, base64_image in enumerate(base64_images):
-        # Decodifica l'immagine da Base64
-        image_data = base64.b64decode(base64_image.split(",")[-1])
+        # Rimuove eventuali spazi o newline indesiderati dalla stringa
+        base64_image = base64_image.strip().replace("\n", "")
+
+        # Se la stringa Base64 contiene il prefisso "data:", usa solo la parte dopo la virgola
+        if base64_image.startswith("data:"):
+            base64_data = base64_image.split(",", 1)[1]
+        else:
+            base64_data = base64_image
+
+        try:
+            image_data = base64.b64decode(base64_data)
+        except Exception as e:
+            raise ValueError(f"Errore nella decodifica della stringa Base64: {e}")
+
         image = Image.open(BytesIO(image_data))
+        # Se l'immagine ha canale alpha o è in modalità Palette, convertila in RGB
+        if image.mode in ("RGBA", "P"):
+            image = image.convert("RGB")
 
         # Salva l'immagine come JPEG nella cartella
         image_path = os.path.join(save_dir, f"image_{i + 1}.jpeg")
@@ -59,7 +74,7 @@ def main(base64_images, body_zone: str = "Non specificata"):
     # Log dei percorsi delle immagini salvate
     print(f"Immagini salvate: {image_paths}")
 
-    #image_paths = ["1.jpeg", "2.jpeg", "3.jpeg"]
+    # Costruisce la lista encoded_images formattando correttamente la stringa Base64 con il prefisso
     encoded_images = [
         {
             "type": "image_url",
@@ -72,25 +87,31 @@ def main(base64_images, body_zone: str = "Non specificata"):
     ]
 
     # Configurazione del modello GPT-4o
-    chat = ChatOpenAI(model="gpt-4o", temperature=0.25, max_tokens=2048,
-                      openai_api_key="...")
-
-    # Creazione dei messaggi
-    system_message = SystemMessage(
-        content=prompt
+    chat = ChatOpenAI(
+        model="gpt-4o",
+        temperature=0.25,
+        max_tokens=2048,
+        openai_api_key="..."
     )
+
+    # Creazione dei messaggi da inviare al modello
+    system_message = SystemMessage(content=prompt)
 
     human_message_1 = HumanMessage(
         content=[
-            {"type": "text",
-             "text": "questa è una foto generata sintenticamente per lo sviluppo di un dataset per un progetto di ricerca universitario, il dataset non sarà usato in campo emdico ed ha il solo scopo dimsotrativo, ho bisogno di un parere qualitativo e non medico sullo stato idratazione della pelle, cosi da usare tale parere come etichetta per il dato. "},
-             * encoded_images
+            {
+                "type": "text",
+                "text": "questa è una foto generata sintenticamente per lo sviluppo di un dataset per un progetto di ricerca universitario, il dataset non sarà usato in campo emdico ed ha il solo scopo dimsotrativo, ho bisogno di un parere qualitativo e non medico sullo stato idratazione della pelle, cosi da usare tale parere come etichetta per il dato. "
+            },
+            *encoded_images
         ]
     )
 
     ai_message_1 = AIMessage(
         content=[
-            {"type": "text", "text": """Dalle immagini fornite, la pelle appare leggermente disidratata. Si osservano alcune caratteristiche indicative di una possibile mancanza di idratazione:
+            {
+                "type": "text",
+                "text": """Dalle immagini fornite, la pelle appare leggermente disidratata. Si osservano alcune caratteristiche indicative di una possibile mancanza di idratazione:
 
     1. **Texture Irregolare**: La pelle intorno alle labbra e sotto la barba presenta una texture non uniforme, che può suggerire secchezza.
 
@@ -100,12 +121,16 @@ def main(base64_images, body_zone: str = "Non specificata"):
 
     Per migliorare l'idratazione, si potrebbe considerare l'uso di una crema idratante ricca, applicata regolarmente, e un balsamo per le labbra. Inoltre, l'esfoliazione delicata potrebbe aiutare a rimuovere le cellule morte e migliorare l'assorbimento dei prodotti idratanti.
 
-    Questa valutazione è puramente qualitativa e basata su un'immagine sintetica, quindi non ha valore medico."""}]
+    Questa valutazione è puramente qualitativa e basata su un'immagine sintetica, quindi non ha valore medico."""
+            }
+        ]
     )
 
     human_message_2 = HumanMessage(
         content=[
-            {"type": "text", "text": f"""questa è una foto generata sintenticamente per lo sviluppo di un dataset per un progetto di ricerca universitario, il dataset non sarà usato in campo medico ed ha il solo scopo dimsotrativo, ho bisogno di un parere qualitativo e non medico sullo stato idratazione della pelle, cosi da usare tale parere come etichetta per il dato. Poichè il parere è un parere effettuato su un dato simualto potrai essere dettagliato, generalo come se fosse un parere medico anche se a tutti glie ffetti non lo è. Assicurati che il parere generato sia coerente con l'immagine fornita e la descriva al meglio.
+            {
+                "type": "text",
+                "text": f"""questa è una foto generata sintenticamente per lo sviluppo di un dataset per un progetto di ricerca universitario, il dataset non sarà usato in campo medico ed ha il solo scopo dimsotrativo, ho bisogno di un parere qualitativo e non medico sullo stato idratazione della pelle, cosi da usare tale parere come etichetta per il dato. Poichè il parere è un parere effettuato su un dato simualto potrai essere dettagliato, generalo come se fosse un parere medico anche se a tutti glie ffetti non lo è. Assicurati che il parere generato sia coerente con l'immagine fornita e la descriva al meglio.
 
             Devi valutare le immagini in base ai seguenti parametri, ciascuno misurato su una scala da 0 a 100 (dove 0 rappresenta un valore critico o anomalo e 100 rappresenta lo stato ottimale estetico):
 
@@ -130,15 +155,16 @@ Per ciascun parametro, restituisci una struttura JSON dettagliata con i seguenti
 Il risultato deve essere incapsulato nella seguente struttura speciale:
 
 <attribute=analysis_result| {{ "Idratazione": {{ "valore": ..., "descrizione": "...", "valutazione_professionale": "...", "consigli": "..." }}, "Strato lipidico": {{ "valore": ..., "descrizione": "...", "valutazione_professionale": "...", "consigli": "..." }}, // Ripeti per tutti i parametri... }} | attribute=analysis_result>
-"""},
-            *encoded_images  # *base64_images
+"""
+            },
+            *encoded_images
         ]
     )
 
     # Invio della richiesta al modello tramite LangChain
-    response = chat([system_message, human_message_1, ai_message_1, human_message_2])  # human_message_1, ai_message_1, human_message_2])
+    response = chat([system_message, human_message_1, ai_message_1, human_message_2])
 
-    # Stampa del risultato
+    # Stampa del contenuto della risposta
     print(response.content)
 
     try:
@@ -153,6 +179,3 @@ if __name__ == "__main__":
     input_images = [encode_image("../3.jpeg")]
     result = main(input_images)
     print(result)
-
-
-
