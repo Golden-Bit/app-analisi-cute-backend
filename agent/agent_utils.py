@@ -73,7 +73,7 @@ def main(base64_images, body_zone: str = "Non specificata"):
 
     # Configurazione del modello GPT-4o
     chat = ChatOpenAI(model="gpt-4o", temperature=0.25, max_tokens=2048,
-                      openai_api_key="....")
+                      openai_api_key="...")
 
     # Creazione dei messaggi
     system_message = SystemMessage(

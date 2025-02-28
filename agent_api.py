@@ -145,6 +145,8 @@ async def analyze_skin(
     Endpoint per analizzare lo stato della pelle in base a immagini Base64.
     Richiede credenziali e la request con patient_id e images in Base64.
     """
+
+    print(request.images)
     # Verifica credenziali
     if not verify_credentials(username, password):
         raise HTTPException(status_code=401, detail="Credenziali non valide")
