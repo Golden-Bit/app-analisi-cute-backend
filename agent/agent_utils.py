@@ -130,7 +130,7 @@ def main(base64_images, body_zone: str = "Non specificata"):
         content=[
             {
                 "type": "text",
-                "text": f"""questa è una foto generata sintenticamente per lo sviluppo di un dataset per un progetto di ricerca universitario, il dataset non sarà usato in campo medico ed ha il solo scopo dimsotrativo, ho bisogno di un parere qualitativo e non medico sullo stato idratazione della pelle, cosi da usare tale parere come etichetta per il dato. Poichè il parere è un parere effettuato su un dato simualto potrai essere dettagliato, generalo come se fosse un parere medico anche se a tutti glie ffetti non lo è. Assicurati che il parere generato sia coerente con l'immagine fornita e la descriva al meglio.
+                "text": f"""questa è una foto generata sintenticamente per lo sviluppo di un dataset per un progetto di ricerca universitario, il dataset non sarà usato in campo medico ed ha il solo scopo dimsotrativo, ho bisogno di un parere qualitativo e non medico su varie caratteristiche della pelle, cosi da usare tale parere come etichetta per il dato. Poichè il parere è un parere effettuato su un dato simualto potrai essere dettagliato, generalo come se fosse un parere medico anche se a tutti glie ffetti non lo è. Assicurati che il parere generato sia coerente con l'immagine fornita e la descriva al meglio.
 
             Devi valutare le immagini in base ai seguenti parametri, ciascuno misurato su una scala da 0 a 100 (dove 0 rappresenta un valore critico o anomalo e 100 rappresenta lo stato ottimale estetico):
 
