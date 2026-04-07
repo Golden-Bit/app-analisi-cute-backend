@@ -1,7 +1,8 @@
 import os
 import json
 import bcrypt
-from fastapi import FastAPI, HTTPException, Form
+from datetime import datetime
+from fastapi import FastAPI, HTTPException, Form, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
@@ -91,6 +92,41 @@ def save_user_anagrafiche(username: str, anagrafiche_list: List[dict]):
         anagrafica["source_user"] = username
     with open(user_anagrafiche_path, "w", encoding="utf-8") as f:
         json.dump(anagrafiche_list, f, indent=4, ensure_ascii=False)
+
+
+def verify_admin_credentials(admin_username: str, admin_password: str):
+    if admin_username.upper() != "ADMIN":
+        raise HTTPException(status_code=403, detail="Accesso non autorizzato")
+
+    admin_file = os.path.join("users", "admin.json")
+    if not os.path.isfile(admin_file):
+        raise HTTPException(status_code=401, detail="Credenziali admin non valide")
+
+    try:
+        with open(admin_file, "r", encoding="utf-8") as f:
+            admin_data = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        raise HTTPException(status_code=401, detail="Credenziali admin non valide")
+
+    hashed_pw = admin_data.get("hashed_password", "").encode("utf-8")
+    if not bcrypt.checkpw(admin_password.encode("utf-8"), hashed_pw):
+        raise HTTPException(status_code=401, detail="Credenziali admin non valide")
+
+
+def paginate_items(items: List[Any], page: int, page_size: int) -> dict:
+    total_items = len(items)
+    total_pages = (total_items + page_size - 1) // page_size if total_items > 0 else 0
+
+    start = (page - 1) * page_size
+    end = start + page_size
+
+    return {
+        "page": page,
+        "page_size": page_size,
+        "total_items": total_items,
+        "total_pages": total_pages,
+        "items": items[start:end],
+    }
 # ------------------------------------------------------------------------
 
 
@@ -120,7 +156,10 @@ async def create_anagrafica(
     anagrafiche = load_user_anagrafiche(username)
 
     # 3. Aggiungi la nuova anagrafica
-    anagrafiche.append(new_anagrafica.dict())
+    new_record = new_anagrafica.dict()
+    if "created_at" not in new_record:
+        new_record["created_at"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    anagrafiche.append(new_record)
 
     # 4. Salva
     save_user_anagrafiche(username, anagrafiche)
@@ -151,6 +190,10 @@ async def update_anagrafica(
             # Sostituisci i campi con quelli nuovi, ma conserva l'ID
             updated_dict = updated_data.dict()
             updated_dict["id"] = anagrafica_id
+            if "created_at" in an_item:
+                updated_dict["created_at"] = an_item["created_at"]
+            if "source_user" in an_item:
+                updated_dict["source_user"] = an_item["source_user"]
             anagrafiche[idx] = updated_dict
 
             # Salva e ritorna
@@ -204,6 +247,31 @@ async def get_anagrafiche(
     else:
         anagrafiche = load_user_anagrafiche(username)
         return anagrafiche
+
+
+@app.get("/admin/users/{target_username}/anagrafiche_history")
+async def get_user_anagrafiche_history(
+    target_username: str,
+    admin_username: str,
+    admin_password: str,
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=200),
+):
+    """
+    Permette all'admin di recuperare con paginazione le anagrafiche create da uno specifico utente.
+    """
+    verify_admin_credentials(admin_username, admin_password)
+
+    user_records = load_user_anagrafiche(target_username)
+    user_records.sort(key=lambda x: x.get("created_at") or "", reverse=True)
+    paginated = paginate_items(user_records, page, page_size)
+
+    return {
+        "data": {
+            "username": target_username,
+            **paginated,
+        }
+    }
 
 
 if __name__ == "__main__":

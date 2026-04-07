@@ -1,10 +1,11 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import os
 import json
 import bcrypt
-from typing import Optional, Dict
+from typing import Optional, Dict, List, Any
+from datetime import datetime
 
 app = FastAPI(root_path="/api4")
 
@@ -79,6 +80,47 @@ def save_user_data(user_data: dict):
         json.dump(user_data, f, indent=4)
 
 
+def verify_admin_credentials(admin_username: str, admin_password: str):
+    """
+    Verifica autorizzazione admin.
+    Accetta username admin in forma case-insensitive ma usa l'account admin di sistema.
+    """
+    if admin_username.upper() != "ADMIN":
+        raise HTTPException(status_code=403, detail="Accesso non autorizzato.")
+
+    try:
+        admin_data = load_user_data("admin")
+    except HTTPException:
+        raise HTTPException(status_code=401, detail="Credenziali admin non valide.")
+
+    if not bcrypt.checkpw(admin_password.encode("utf-8"), admin_data["hashed_password"].encode("utf-8")):
+        raise HTTPException(status_code=401, detail="Credenziali admin non valide.")
+
+
+def paginate_items(items: List[Any], page: int, page_size: int) -> dict:
+    total_items = len(items)
+    total_pages = (total_items + page_size - 1) // page_size if total_items > 0 else 0
+
+    start = (page - 1) * page_size
+    end = start + page_size
+
+    return {
+        "page": page,
+        "page_size": page_size,
+        "total_items": total_items,
+        "total_pages": total_pages,
+        "items": items[start:end]
+    }
+
+
+def append_login_history(username: str):
+    user_data = load_user_data(username)
+    login_history = user_data.get("login_history", [])
+    login_history.append({"timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")})
+    user_data["login_history"] = login_history
+    save_user_data(user_data)
+
+
 # -----------------------------
 # Endpoint: Registrazione
 # -----------------------------
@@ -132,6 +174,7 @@ def login_user(credentials: LoginRequest):
     # 2. Verifica l'hash della password
     hashed_password = user_data["hashed_password"].encode("utf-8")
     if bcrypt.checkpw(credentials.password.encode("utf-8"), hashed_password):
+        append_login_history(credentials.username)
         return {"message": "Login effettuato con successo."}
     else:
         raise HTTPException(status_code=401, detail="Username o password non validi.")
@@ -225,18 +268,7 @@ def get_all_accounts(admin_username: str, admin_password: str):
     Permette all'utente admin (username "admin") di visualizzare tutti gli account e le relative informazioni.
     Le credenziali admin devono essere passate come query parameters.
     """
-    # Verifica che l'utente che effettua la richiesta sia "admin"
-    if admin_username != "admin":
-        raise HTTPException(status_code=403, detail="Accesso non autorizzato.")
-
-    # Verifica le credenziali dell'admin
-    try:
-        admin_data = load_user_data(admin_username)
-    except HTTPException:
-        raise HTTPException(status_code=401, detail="Credenziali admin non valide.")
-
-    if not bcrypt.checkpw(admin_password.encode("utf-8"), admin_data["hashed_password"].encode("utf-8")):
-        raise HTTPException(status_code=401, detail="Credenziali admin non valide.")
+    verify_admin_credentials(admin_username, admin_password)
 
     # Leggi tutti i file utente nella cartella USERS_FOLDER
     accounts = []
@@ -247,6 +279,31 @@ def get_all_accounts(admin_username: str, admin_password: str):
                 accounts.append(user_info)
 
     return {"accounts": accounts}
+
+
+@app.get("/admin/login_history/{target_username}")
+def get_login_history(
+    target_username: str,
+    admin_username: str,
+    admin_password: str,
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=200)
+):
+    """
+    Permette all'admin di consultare lo storico accessi di uno specifico utente con paginazione.
+    """
+    verify_admin_credentials(admin_username, admin_password)
+
+    user_data = load_user_data(target_username)
+    history = user_data.get("login_history", [])
+    paginated = paginate_items(history, page, page_size)
+
+    return {
+        "data": {
+            "username": target_username,
+            **paginated
+        }
+    }
 
 
 # -----------------------------
