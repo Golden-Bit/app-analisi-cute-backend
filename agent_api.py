@@ -133,9 +133,11 @@ def build_user_analysis_history(target_username: str) -> List[dict]:
 
         for entry in patient.get("analysis_history", []):
             history_items.append({
-                "patient_id": patient_id,
                 "nome": patient_name,
                 "cognome": patient_surname,
+                "source_user": patient.get("source_user") or target_username,
+                "patient_label": f"{(patient_name or '').strip()} {(patient_surname or '').strip()}".strip(),
+                "patient_ref": patient_id,
                 "timestamp": entry.get("timestamp"),
                 "result": entry.get("result", {}),
             })
